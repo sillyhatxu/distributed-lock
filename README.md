@@ -9,6 +9,8 @@ Distributed locks are a very useful primitive in many environments where differe
 
 ## Installation
 
+https://blog.kowalczyk.info/article/JyRZ/generating-good-unique-ids-in-go.html
+
 
 https://crazyfzw.github.io/2019/04/15/distributed-locks-with-redis/
 

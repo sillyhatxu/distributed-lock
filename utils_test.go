@@ -16,7 +16,7 @@ func TestBackOffDelay(t *testing.T) {
 }
 
 func TestGeneratorLockKey(t *testing.T) {
-	test := GeneratorLockKey("poiuytrewq0")
+	test := GeneratorLockKey("C01D7CF6EC3F47F09556A5D6E9009A43")
 	fmt.Println(test)
 	test = GeneratorLockKey("poiuytrewq1")
 	fmt.Println(test)
