@@ -30,6 +30,25 @@ func TestAcquire(t *testing.T) {
 	assert.EqualValues(t, true, result)
 }
 
+func TestRelease(t *testing.T) {
+	key := "lockkey"
+	value := "this is value"
+	redisPool := NewRedisPool(host, Port(port))
+	unlockResult := redisPool.Release(key, value)
+	assert.EqualValues(t, true, unlockResult)
+}
+
+func TestAcquireAndRelease(t *testing.T) {
+	key := "lockkey"
+	value := "this is value"
+	expiry := 60 * time.Second
+	redisPool := NewRedisPool(host, Port(port))
+	result := redisPool.Acquire(key, value, expiry)
+	assert.EqualValues(t, true, result)
+	unlockResult := redisPool.Release(key, value)
+	assert.EqualValues(t, true, unlockResult)
+}
+
 func TestScriptGetValue(t *testing.T) {
 	name := "dGVzdC1rZXk="
 	pool := getPool()
