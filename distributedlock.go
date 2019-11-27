@@ -10,14 +10,21 @@ import (
 const (
 	defaultLockKeyPrefix = "GoDistRL" //golang distributed redis lock
 	defaultExpiry        = 60 * time.Second
+	defaultTimeout       = 60 * time.Second
 	defaultAttempts      = 8
-	defaultDelay         = 200 * time.Millisecond
+	defaultDelay         = 100 * time.Millisecond
 )
 
 type DistributedLock struct {
 	pool          *redis.RedisPool
 	config        *ConfigOption
-	customChannel chan error
+	customChannel chan ChannelResult
+}
+
+type ChannelResult struct {
+	key       string
+	requestId string
+	err       error
 }
 
 func New(pool *redis.RedisPool, opts ...Option) (*DistributedLock, error) {
@@ -25,6 +32,7 @@ func New(pool *redis.RedisPool, opts ...Option) (*DistributedLock, error) {
 	config := &ConfigOption{
 		lockKeyPrefix: defaultLockKeyPrefix,
 		expiry:        defaultExpiry,
+		timeout:       defaultTimeout,
 		attempts:      defaultAttempts,
 		delay:         defaultDelay,
 		errorCallback: func(n uint, err error) {
@@ -40,7 +48,7 @@ func New(pool *redis.RedisPool, opts ...Option) (*DistributedLock, error) {
 	return &DistributedLock{
 		pool:          pool,
 		config:        config,
-		customChannel: make(chan error),
+		customChannel: make(chan ChannelResult),
 	}, err
 }
 
@@ -53,26 +61,33 @@ func (dl *DistributedLock) Lock(lockKey string, executeFun ExecuteFunc) error {
 	key := dl.config.lockKey(lockKey)
 	requestId := GeneratorRequestId()
 	go dl.execute(key, requestId, executeFun, dl.customChannel)
-	err := <-dl.customChannel
-	dl.pool.Release(key, requestId)
-	return err
+	channelResult := <-dl.customChannel
+	defer dl.pool.Release(key, requestId)
+	if channelResult.err != nil {
+		return err
+	}
+	if !dl.pool.Release(key, requestId) {
+		return fmt.Errorf("release error. %s : %s", key, requestId)
+	}
+	return nil
 }
 
-func (dl *DistributedLock) execute(key string, requestId string, executeFun ExecuteFunc, c chan error) {
-	var n uint
-	for n < dl.config.attempts {
+func (dl *DistributedLock) execute(key string, requestId string, executeFun ExecuteFunc, c chan ChannelResult) {
+	timeoutTime := time.Now().Add(dl.config.timeout)
+	for true {
 		if dl.pool.Acquire(key, requestId, dl.config.expiry) {
-			c <- executeFun()
+			c <- ChannelResult{key: key, requestId: requestId, err: executeFun()}
 			return
 		}
-		if n >= dl.config.attempts-1 {
+		if time.Now().UnixNano() >= timeoutTime.UnixNano() {
+			fmt.Println(time.Now().UnixNano(), timeoutTime.UnixNano())
 			break
 		}
-		time.Sleep(dl.config.delayType(n, dl.config))
-		n++
+		time.Sleep(dl.config.delayType(0, dl.config))
+		//time.Sleep(dl.config.delayType(n, dl.config))
 		continue
 	}
 	logrus.Errorf("more than the number of retries : %v", ErrFailed)
-	c <- ErrFailed
+	c <- ChannelResult{key: key, requestId: requestId, err: ErrFailed}
 	return
 }
