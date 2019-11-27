@@ -2,8 +2,13 @@ package distlock
 
 import (
 	"encoding/base64"
+	"github.com/rs/xid"
 	"time"
 )
+
+func GeneratorRequestId() string {
+	return xid.New().String()
+}
 
 func BackOffDelay(n uint, co *ConfigOption) time.Duration {
 	result := co.delay * (1 << n)

@@ -1,7 +1,9 @@
 package distlock
 
 import (
+	"fmt"
 	"github.com/sillyhatxu/distributed-lock/redis"
+	"github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -34,9 +36,43 @@ func New(pool *redis.RedisPool, opts ...Option) (*DistributedLock, error) {
 	for _, opt := range opts {
 		opt(config)
 	}
+	err := pool.Ping()
 	return &DistributedLock{
 		pool:          pool,
 		config:        config,
 		customChannel: make(chan error),
-	}, nil
+	}, err
+}
+
+type ExecuteFunc func() error
+
+func (dl *DistributedLock) Lock(lockKey string, executeFun ExecuteFunc) error {
+	if dl == nil || dl.config == nil {
+		return fmt.Errorf("redis lock is nil")
+	}
+	key := dl.config.lockKey(lockKey)
+	requestId := GeneratorRequestId()
+	go dl.execute(key, requestId, executeFun, dl.customChannel)
+	err := <-dl.customChannel
+	dl.pool.Release(key, requestId)
+	return err
+}
+
+func (dl *DistributedLock) execute(key string, requestId string, executeFun ExecuteFunc, c chan error) {
+	var n uint
+	for n < dl.config.attempts {
+		if dl.pool.Acquire(key, requestId, dl.config.expiry) {
+			c <- executeFun()
+			return
+		}
+		if n >= dl.config.attempts-1 {
+			break
+		}
+		time.Sleep(dl.config.delayType(n, dl.config))
+		n++
+		continue
+	}
+	logrus.Errorf("more than the number of retries : %v", ErrFailed)
+	c <- ErrFailed
+	return
 }

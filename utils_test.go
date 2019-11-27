@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+func TestGeneratorRequestId(t *testing.T) {
+	fmt.Println(GeneratorRequestId())
+	fmt.Println(GeneratorRequestId())
+	fmt.Println(GeneratorRequestId())
+	fmt.Println(GeneratorRequestId())
+	fmt.Println(GeneratorRequestId())
+	fmt.Println(GeneratorRequestId())
+	fmt.Println(GeneratorRequestId())
+}
+
 func TestBackOffDelay(t *testing.T) {
 	configOption := &ConfigOption{delay: 200 * time.Millisecond}
 	var n uint
