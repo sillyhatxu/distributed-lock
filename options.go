@@ -13,6 +13,7 @@ type LockKeyFunc func(key string) string
 type ConfigOption struct {
 	lockKeyPrefix string
 	expiry        time.Duration
+	timeout       time.Duration
 	attempts      uint
 	delay         time.Duration
 	errorCallback ErrorCallbackFunc
@@ -31,6 +32,12 @@ func LockKeyPrefix(lockKeyPrefix string) Option {
 func Expiry(expiry time.Duration) Option {
 	return func(c *ConfigOption) {
 		c.expiry = expiry
+	}
+}
+
+func Timeout(timeout time.Duration) Option {
+	return func(c *ConfigOption) {
+		c.timeout = timeout
 	}
 }
 

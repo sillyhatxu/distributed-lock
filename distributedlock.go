@@ -62,11 +62,11 @@ func (dl *DistributedLock) Lock(lockKey string, executeFun ExecuteFunc) error {
 	requestId := GeneratorRequestId()
 	go dl.execute(key, requestId, executeFun, dl.customChannel)
 	channelResult := <-dl.customChannel
-	defer dl.pool.Release(key, requestId)
 	if channelResult.err != nil {
-		return err
+		return channelResult.err
 	}
-	if !dl.pool.Release(key, requestId) {
+	//defer dl.pool.Release(channelResult.key, channelResult.requestId)
+	if !dl.pool.Release(channelResult.key, channelResult.requestId) {
 		return fmt.Errorf("release error. %s : %s", key, requestId)
 	}
 	return nil

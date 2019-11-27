@@ -31,8 +31,8 @@ func TestAcquire(t *testing.T) {
 }
 
 func TestRelease(t *testing.T) {
-	key := "lockkey"
-	value := "this is value"
+	key := "dGVzdGxvY2trZXk="
+	value := "bnf3urfbudgspfs1gou0"
 	redisPool := NewRedisPool(host, Port(port))
 	unlockResult := redisPool.Release(key, value)
 	assert.EqualValues(t, true, unlockResult)

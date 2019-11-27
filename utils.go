@@ -3,6 +3,7 @@ package distlock
 import (
 	"encoding/base64"
 	"github.com/rs/xid"
+	"math/rand"
 	"time"
 )
 
@@ -11,11 +12,12 @@ func GeneratorRequestId() string {
 }
 
 func BackOffDelay(n uint, co *ConfigOption) time.Duration {
-	result := co.delay * (1 << n)
-	if result > 2*time.Second {
-		return time.Second
-	}
-	return result
+	return co.delay + time.Duration(rand.Intn(100))*time.Millisecond
+	//result := co.delay * (1 << n)
+	//if result > 2*time.Second {
+	//	return time.Second
+	//}
+	//return result
 	//return co.delay * (1 << n)
 }
 
