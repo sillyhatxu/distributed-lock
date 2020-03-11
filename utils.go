@@ -24,3 +24,10 @@ func BackOffDelay(n uint, co *ConfigOption) time.Duration {
 func GeneratorLockKey(lockKey string) string {
 	return base64.StdEncoding.EncodeToString([]byte(lockKey))
 }
+
+// test upload
+func test() {
+	return
+}
+
+
