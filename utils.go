@@ -12,22 +12,9 @@ func GeneratorRequestId() string {
 }
 
 func BackOffDelay(n uint, co *ConfigOption) time.Duration {
-	return co.delay + time.Duration(rand.Intn(100))*time.Millisecond
-	//result := co.delay * (1 << n)
-	//if result > 2*time.Second {
-	//	return time.Second
-	//}
-	//return result
-	//return co.delay * (1 << n)
+	return co.delay + (time.Duration(rand.Intn(int(n*10))) * time.Millisecond)
 }
 
 func GeneratorLockKey(lockKey string) string {
 	return base64.StdEncoding.EncodeToString([]byte(lockKey))
 }
-
-// test upload
-func test() {
-	return
-}
-
-

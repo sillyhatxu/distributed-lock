@@ -10,8 +10,19 @@ import (
 
 const (
 	testHost = "127.0.0.1"
-	testPort = 16379
+	testPort = 6379
 )
+
+type ParametersInterface struct {
+	Params int
+}
+
+func (pi *ParametersInterface) Exe() error {
+	//fmt.Printf("index: %d \n", pi.Params)
+	fmt.Sprintf("index: %d", pi.Params)
+	//pi.Params++
+	return nil
+}
 
 func TestNew(t *testing.T) {
 	timeout := 60 * time.Second
@@ -42,10 +53,8 @@ func TestLockGoroutine(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < number; i++ {
-				err := redisLock.Lock(key, func() error {
-					count++
-					return nil
-				})
+				ei := ParametersInterface{Params: i}
+				err := redisLock.Lock(key, &ei)
 				if err != nil {
 					panic(err)
 				}

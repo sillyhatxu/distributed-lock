@@ -12,8 +12,12 @@ const (
 	defaultExpiry        = 60 * time.Second
 	defaultTimeout       = 60 * time.Second
 	defaultAttempts      = 8
-	defaultDelay         = 100 * time.Millisecond
+	defaultDelay         = 10 * time.Millisecond
 )
+
+type ExecutionInterface interface {
+	Exe() error
+}
 
 type DistributedLock struct {
 	pool          *redis.RedisPool
@@ -54,37 +58,35 @@ func New(pool *redis.RedisPool, opts ...Option) (*DistributedLock, error) {
 
 type ExecuteFunc func() error
 
-func (dl *DistributedLock) Lock(lockKey string, executeFun ExecuteFunc) error {
+func (dl *DistributedLock) Lock(lockKey string, execute ExecutionInterface) error {
 	if dl == nil || dl.config == nil {
 		return fmt.Errorf("redis lock is nil")
 	}
 	key := dl.config.lockKey(lockKey)
 	requestId := GeneratorRequestId()
-	go dl.execute(key, requestId, executeFun, dl.customChannel)
+	go dl.execute(key, requestId, execute, dl.customChannel)
 	channelResult := <-dl.customChannel
 	if channelResult.err != nil {
 		return channelResult.err
 	}
-	//defer dl.pool.Release(channelResult.key, channelResult.requestId)
 	if !dl.pool.Release(channelResult.key, channelResult.requestId) {
 		return fmt.Errorf("release error. %s : %s", key, requestId)
 	}
 	return nil
 }
 
-func (dl *DistributedLock) execute(key string, requestId string, executeFun ExecuteFunc, c chan ChannelResult) {
+func (dl *DistributedLock) execute(key string, requestId string, execute ExecutionInterface, c chan ChannelResult) {
 	timeoutTime := time.Now().Add(dl.config.timeout)
-	for true {
+	for {
 		if dl.pool.Acquire(key, requestId, dl.config.expiry) {
-			c <- ChannelResult{key: key, requestId: requestId, err: executeFun()}
+			c <- ChannelResult{key: key, requestId: requestId, err: execute.Exe()}
 			return
 		}
 		if time.Now().UnixNano() >= timeoutTime.UnixNano() {
 			fmt.Println(time.Now().UnixNano(), timeoutTime.UnixNano())
 			break
 		}
-		time.Sleep(dl.config.delayType(0, dl.config))
-		//time.Sleep(dl.config.delayType(n, dl.config))
+		time.Sleep(dl.config.delayType(1, dl.config))
 		continue
 	}
 	logrus.Errorf("more than the number of retries : %v", ErrFailed)
